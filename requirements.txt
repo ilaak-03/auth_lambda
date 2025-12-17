@@ -1,0 +1,4 @@
+boto3
+pg8000
+
+⚠️ Note: boto3 is already available in Lambda, but keep it for clarity.
