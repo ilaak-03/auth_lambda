@@ -20,9 +20,7 @@ This project implements user authentication using:
 
 ## API Usage
 
-### Signup
-POST /user
-```json
+
 {
   "action": "signup",
   "email": "user@example.com",
@@ -45,5 +43,6 @@ POST /user
   "email": "user@example.com",
   "new_password": "NewPass@123"
 }
+
 
 
