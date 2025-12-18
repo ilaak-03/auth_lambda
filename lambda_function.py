@@ -1,69 +1,59 @@
 import json
-
-from signup import handle_signup
+from signup import (
+    handle_signup,
+    handle_confirm_signup
+)
 from login import handle_login
 from forgot_password import handle_forgot_password
 from reset_password import handle_reset_password
 
 
-# ---------------- RESPONSE HELPER ----------------
-
-def response(status, body):
+def response(status_code, body):
     return {
-        "statusCode": status,
-        "headers": {
-            "Content-Type": "application/json"
-        },
+        "statusCode": status_code,
+        "headers": {"Content-Type": "application/json"},
         "body": json.dumps(body)
     }
 
 
-# ---------------- LAMBDA HANDLER ----------------
-
 def lambda_handler(event, context):
     try:
-        body = event.get("body")
-        if not body:  # None or empty
-            body = "{}"
-        if isinstance(body, str):
-            try:
-                body = json.loads(body)
-            except json.JSONDecodeError:
-                return response(400, {"message": "Invalid JSON in body"})
+        path = event.get("resource") or event.get("path") or ""
+        body = json.loads(event.get("body") or "{}")
 
-        action = body.get("action")
         email = body.get("email")
+        password = body.get("password")
+        code = body.get("code")
+        new_password = body.get("new_password")
 
-        if not action or not email:
-            return response(400, {"message": "action and email required"})
+        # -------- ROUTING --------
+        if "/signup" in path:
+            result = handle_signup(email, password)
 
-        # -------- SIGNUP --------
-        if action == "signup":
-            password = body.get("password")
-            if not password:
-                return response(400, {"message": "password required"})
-            return response(201, handle_signup(email, password))
+        elif "/confirm-signup" in path:
+            result = handle_confirm_signup(email, code)
 
-        # -------- LOGIN --------
-        if action == "login":
-            password = body.get("password")
-            if not password:
-                return response(400, {"message": "password required"})
-            return response(200, handle_login(email, password))
+        elif "/login" in path:
+            result = handle_login(email, password)
 
-        # -------- FORGOT PASSWORD --------
-        if action == "forgot_password":
-            return response(200, handle_forgot_password(email))
+        elif "/forgot-password" in path:
+            result = handle_forgot_password(email)
 
-        # -------- RESET PASSWORD --------
-        if action == "reset_password":
-            new_password = body.get("new_password")
-            if not new_password:
-                return response(400, {"message": "new_password required"})
-            return response(200, handle_reset_password(email, new_password))
+        elif "/reset-password" in path:
+            result = handle_reset_password(
+                email,
+                body.get("code"),
+                body.get("new_password"))
 
-        # Invalid action
-        return response(400, {"message": "Invalid action"})
+        else:
+            return response(404, {"message": "Invalid API path"})
+
+        # -------- COMMON RESPONSE --------
+        if "error" in result:
+            return response(400, result)
+
+        return response(200, result)
 
     except Exception as e:
+        # Any missing fields, invalid JSON, or runtime errors end up here
         return response(500, {"message": str(e)})
