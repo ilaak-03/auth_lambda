@@ -1,12 +1,17 @@
 import os
-import pg8000
+import hmac
+import hashlib
+import base64
+import boto3
 
-def get_db_connection():
-    return pg8000.connect(
-        host=os.environ["DB_HOST"],
-        database=os.environ["DB_NAME"],
-        user=os.environ["DB_USER"],
-        password=os.environ["DB_PASSWORD"],
-        port=int(os.environ["DB_PORT"]),
-        ssl_context=True
-    )
+cognito = boto3.client("cognito-idp")
+
+def get_secret_hash(username):
+    msg = username + os.environ["COGNITO_CLIENT_ID"]
+    key = os.environ["COGNITO_CLIENT_SECRET"]
+    dig = hmac.new(
+        key.encode("utf-8"),
+        msg.encode("utf-8"),
+        hashlib.sha256
+    ).digest()
+    return base64.b64encode(dig).decode()
